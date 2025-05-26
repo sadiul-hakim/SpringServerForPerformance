@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Race</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            width: 200px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #progress {
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            min-width: 200px;
+        }
+    </style>
+    <script>
+        let playerId = "player" + Math.floor(Math.random() * 1000);
+        let eventSource = new EventSource(`/typing-race/subscribe/${playerId}`);
+
+        eventSource.onmessage = function(event) {
+            let progress = JSON.parse(event.data);
+            let progressDisplay = document.getElementById("progress");
+            progressDisplay.innerHTML = "";
+            for (let player in progress) {
+                progressDisplay.innerHTML += `<p>${player}: ${progress[player]}%</p>`;
+            }
+        };
+
+        function updateProgress() {
+            let typedPercentage = document.getElementById("progressInput").value;
+            fetch(`/typing-race/progress/${playerId}/${typedPercentage}`, { method: "POST" });
+        }
+    </script>
+</head>
+<body>
+<h1>Typing Race</h1>
+<p>Type and update your progress:</p>
+<input type="number" id="progressInput" placeholder="Enter progress %" />
+<button onclick="updateProgress()">Update Progress</button>
+<h2>Live Progress:</h2>
+<div id="progress"></div>
+</body>
+</html>
