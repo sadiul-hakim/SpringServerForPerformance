@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import java.util.zip.GZIPOutputStream;
 
 @RestController
 public class TestController {
@@ -58,6 +59,16 @@ public class TestController {
         });
 
         return emitter;
+    }
+
+    /*
+     * This is much faster(compressed) than streaming
+     * */
+    @GetMapping("/huge-json-zip")
+    public List<DataObject> streamJsonResponseZip() {
+        return IntStream.range(0, 100_000)
+                .mapToObj(i -> new DataObject(i, "Item " + i))
+                .toList();
     }
 
     @GetMapping("/huge-json")
@@ -110,6 +121,35 @@ public class TestController {
                 jsonGenerator.writeEndArray(); // End JSON array
             }
         };
+    }
+
+    @GetMapping(value = "/huge-json-gzip", produces = "application/json")
+    public ResponseEntity<StreamingResponseBody> streamGzipJson() {
+
+        StreamingResponseBody response = outputStream -> {
+            // Wrap the output in a GZIPOutputStream for compression
+            try (GZIPOutputStream gzipOut = new GZIPOutputStream(outputStream);
+                 JsonGenerator jsonGen = objectMapper.getFactory().createGenerator(gzipOut)) {
+
+                jsonGen.writeStartArray(); // Begin JSON array
+
+                IntStream.range(0, 100_000).forEach(i -> {
+                    try {
+                        jsonGen.writeObject(new DataObject(i, "Item " + i));
+                        jsonGen.flush(); // Optional: flush to push bytes early
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                jsonGen.writeEndArray(); // End JSON array
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header("Content-Encoding", "gzip")
+                .header("Content-Type", "application/json")
+                .body(response);
     }
 
     public static class DataObject {
